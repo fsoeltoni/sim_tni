@@ -1,4 +1,4 @@
 import jsonServerProvider from "ra-data-json-server";
-import attrs from "./attrs";
+import { server_ip, server_port } from "./attrs";
 
-export default jsonServerProvider(attrs.server);
+export default jsonServerProvider(server_ip + ":" + server_port);

@@ -10,7 +10,7 @@ import {
 import toBase64 from "image-to-base64";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
-import attrs from "../../providers/attrs";
+import { camera_server, live_camera_server } from "../../providers/attrs";
 
 const useStyles = makeStyles(theme => ({
   button: {
@@ -29,8 +29,8 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const CameraComponent = ({ input: { onChange }, ...rest }) => {
   const classes = useStyles();
-  const capturedServer = attrs.url.capturedServer;
-  const liveViewServer = attrs.url.liveViewServer;
+  const capturedServer = camera_server;
+  const liveViewServer = live_camera_server;
   const cropRef = useRef();
   const [imgSrc, setImgSrc] = useState(null);
   const [open, setOpen] = useState(false);

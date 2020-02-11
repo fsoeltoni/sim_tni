@@ -1,6 +1,6 @@
 import React from "react";
 import { Admin, Resource } from "react-admin";
-import attrs from "./providers/attrs";
+import { title } from "./providers/attrs";
 import data from "./providers/data";
 import SimCreate from "./resources/sim/SimCreate";
 import SimList from "./resources/sim/SimList";
@@ -10,13 +10,20 @@ import PenggunaCreate from "./resources/pengguna/PenggunaCreate";
 import PenggunaList from "./resources/pengguna/PenggunaList";
 import auth from "./providers/auth";
 import PemohonList from "./resources/pemohon/PemohonList";
+import route from "./providers/route";
+import SatlakEdit from "./resources/satlak/SatlakEdit";
 
-const title = attrs.title;
 const dataProvider = data;
 const authProvider = auth;
+const customRoutes = route;
 
 const App = () => (
-  <Admin title={title} authProvider={authProvider} dataProvider={dataProvider}>
+  <Admin
+    title={title}
+    authProvider={authProvider}
+    dataProvider={dataProvider}
+    customRoutes={customRoutes}
+  >
     <Resource
       name="sim"
       options={{ label: "SIM" }}
@@ -39,6 +46,7 @@ const App = () => (
       name="satlak"
       options={{ label: "SATLAK" }}
       create={SatlakCreate}
+      edit={SatlakEdit}
       list={SatlakList}
     />
     <Resource name="ibukota_provinsi" />

@@ -9,7 +9,8 @@ import {
   TextInput,
   DateInput,
   NumberInput,
-  FormDataConsumer
+  FormDataConsumer,
+  ImageInput
 } from "react-admin";
 import moment from "moment";
 import NoIdentitasInput from "./helpers/input/NoIdentitasInput";
@@ -19,6 +20,9 @@ import isPrajuritTniAd from "./helpers/input/conditions/isPrajuritTniAd";
 import isPnsTniAd from "./helpers/input/conditions/isPnsTniAd";
 import InputJenisPemohon from "./helpers/input/InputJenisPemohon";
 import SimCreateToolbar from "./helpers/create/SimCreateToolbar";
+import ImageBase64Field from "../../helpers/components/ImageBase64Field";
+import CameraInput from "../../helpers/input/CameraInput";
+import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 
 const SimCreate = ({ permissions, ...props }) => {
   const [initialValues, setInitialValues] = useState();
@@ -93,15 +97,17 @@ const SimCreate = ({ permissions, ...props }) => {
           <TextInput source="pemohon.nama" label="Nama" />
           <FormDataConsumer subscription={{ values: true }}>
             {({ formData, ...rest }) =>
-              isPrajuritTniAd(formData) && (
+              (isPrajuritTniAd(formData) || isPnsTniAd(formData)) && (
                 <ReferenceInput
                   source="pemohon.pangkat_id"
                   reference="pangkat"
                   label="Pangkat"
                   sort={{ field: "id", order: "ASC" }}
                   {...rest}
+                  defaultValue={isPnsTniAd(formData) ? 23 : null}
+                  disabled={isPnsTniAd(formData)}
                 >
-                  <AutocompleteInput optionText="kode" />
+                  <SelectInput optionText="kode" />
                 </ReferenceInput>
               )
             }
@@ -177,9 +183,22 @@ const SimCreate = ({ permissions, ...props }) => {
             }
           </FormDataConsumer>
         </FormTab>
-        <FormTab label="Pas Foto"></FormTab>
-        <FormTab label="Tanda Tangan"></FormTab>
-        <FormTab label="Sidik Jari"></FormTab>
+        <FormTab label="Pas Foto">
+          <CameraInput />
+        </FormTab>
+        <FormTab label="Tanda Tangan">
+          <SignaturePadInput />
+        </FormTab>
+        <FormTab label="Sidik Jari">
+          <ImageInput
+            source="sidik_jari"
+            label="Sidik Jari"
+            accept="image/*"
+            multiple={true}
+          >
+            <ImageBase64Field source="src" title="sidik_jari" />
+          </ImageInput>
+        </FormTab>
       </TabbedForm>
     </Create>
   ) : null;

@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  Create,
+  Edit,
   TabbedForm,
   FormTab,
   ReferenceInput,
@@ -13,13 +13,13 @@ import {
 import ImageBase64Field from "../../helpers/components/ImageBase64Field";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 
-const SatlakCreate = props => {
+const SatlakEdit = props => {
   const initialValues = {
     korps_komandan_id: 9
   };
 
   return (
-    <Create {...props} title="Tambah SATLAK">
+    <Edit {...props} title="Ubah SATLAK">
       <TabbedForm initialValues={initialValues} variant="outlined">
         <FormTab label="Keterangan">
           <ReferenceInput
@@ -68,8 +68,8 @@ const SatlakCreate = props => {
           </ImageInput>
         </FormTab>
       </TabbedForm>
-    </Create>
+    </Edit>
   );
 };
 
-export default SatlakCreate;
+export default SatlakEdit;
