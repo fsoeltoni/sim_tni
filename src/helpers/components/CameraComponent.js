@@ -1,4 +1,4 @@
-import React, { forwardRef, useState, useRef } from "react";
+import React, { forwardRef, useState, useRef, useCallback } from "react";
 import {
   Button,
   Dialog,
@@ -11,6 +11,7 @@ import toBase64 from "image-to-base64";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import { camera_server, live_camera_server } from "../../providers/attrs";
+import Webcam from "react-webcam";
 
 const useStyles = makeStyles(theme => ({
   button: {
@@ -29,27 +30,32 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const CameraComponent = ({ input: { onChange }, ...rest }) => {
   const classes = useStyles();
-  const capturedServer = camera_server;
-  const liveViewServer = live_camera_server;
   const cropRef = useRef();
   const [imgSrc, setImgSrc] = useState(null);
   const [open, setOpen] = useState(false);
-
+  const webcamRef = React.useRef(null);
   const handleClickOpen = () => setOpen(true);
 
   const handleClose = () => setOpen(false);
 
-  const handleCapture = () =>
-    toBase64(capturedServer + "?" + Date.now())
-      .then(response => {
-        const result = "data:image/jpg;base64," + response;
-        setImgSrc(result);
-        handleClose();
-      })
-      .catch(error => {
-        console.error(error);
-        return;
-      });
+
+  const capture = React.useCallback(
+    () => {
+      toBase64(webcamRef.current.getScreenshot())
+        .then(response => {
+          
+          const result = "data:image/jpg;base64," + response;
+          setImgSrc(result);
+          handleClose();
+        })
+        .catch(error => {
+          console.error(error);
+          return;
+        });
+    },
+    [webcamRef]
+  );
+
 
   const crop = () => onChange(cropRef.current.getCroppedCanvas().toDataURL());
 
@@ -85,10 +91,11 @@ const CameraComponent = ({ input: { onChange }, ...rest }) => {
         fullWidth
       >
         {/* <DialogContent> */}
-        <img src={liveViewServer} alt="Live View" />
+        {/* <img src={liveViewServer} alt="Live View" /> */}
         {/* </DialogContent> */}
+        <Webcam ref={webcamRef} videoConstraints={{ facingMode: 'environment' }} />
         <DialogActions>
-          <Button onClick={handleCapture} color="primary">
+          <Button onClick={capture} color="primary">
             Ambil Foto
           </Button>
         </DialogActions>

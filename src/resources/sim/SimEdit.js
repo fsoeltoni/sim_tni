@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Create,
+  Edit,
   TabbedForm,
   FormTab,
   ReferenceInput,
@@ -8,6 +8,7 @@ import {
   AutocompleteInput,
   TextInput,
   DateInput,
+  NumberInput,
   FormDataConsumer,
   ImageInput
 } from "react-admin";
@@ -18,35 +19,29 @@ import hasJenisPemohon from "./helpers/input/conditions/hasJenisPemohon";
 import isPrajuritTniAd from "./helpers/input/conditions/isPrajuritTniAd";
 import isPnsTniAd from "./helpers/input/conditions/isPnsTniAd";
 import InputJenisPemohon from "./helpers/input/InputJenisPemohon";
-import SimCreateToolbar from "./helpers/create/SimCreateToolbar";
+import SimEditToolbar from "./helpers/edit/SimEditToolbar";
 import ImageBase64Field from "../../helpers/components/ImageBase64Field";
 import CameraInput from "../../helpers/input/CameraInput";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 
-const SimCreate = ({ permissions, ...props }) => {
+const SimEdit = ({ permissions, ...props }) => {
   const [initialValues, setInitialValues] = useState();
-  const now = moment();
 
   useEffect(() => {
     if (permissions) {
-      const created = moment(now).format("YYYY-MM-DD");
-      const updated = moment(now).format("YYYY-MM-DD");
-const berlaku_hingga = moment(created).add(5, "y").format("YYYY-MM-DD");
-      			
+      const updated = moment();
 
       setInitialValues({
         satlak_id: permissions.satlak_id,
-        created,
-        updated,
-berlaku_hingga
+        updated
       });
     }
   }, [permissions]);
 
   return permissions ? (
-    <Create {...props} title="Tambah SIM">
+    <Edit {...props} title="Ubah SIM">
       <TabbedForm
-        toolbar={<SimCreateToolbar />}
+        toolbar={<SimEditToolbar />}
         initialValues={initialValues}
         variant="outlined"
       >
@@ -120,11 +115,10 @@ berlaku_hingga
                   source="pemohon.korps_id"
                   reference="korps"
                   label="Korps"
-                  allowEmpty
                   sort={{ field: "id", order: "ASC" }}
                   {...rest}
                 >
-                  <SelectInput optionText="kode" />
+                  <AutocompleteInput optionText="kode" />
                 </ReferenceInput>
               )
             }
@@ -151,6 +145,7 @@ berlaku_hingga
               )
             }
           </FormDataConsumer>
+
           <TextInput source="pemohon.kesatuan" label="Kesatuan" />
           <TextInput source="pemohon.alamat" label="Alamat" />
           <TextInput source="pemohon.tempat_lahir" label="Tempat Lahir" />
@@ -166,7 +161,7 @@ berlaku_hingga
           <FormDataConsumer subscription={{ values: true }}>
             {({ formData, ...rest }) =>
               isPrajuritTniAd(formData) && (
-                <TextInput
+                <NumberInput
                   source="pemohon.no_ktp_prajurit"
                   label="No. KTP Prajurit"
                   {...rest}
@@ -192,8 +187,8 @@ berlaku_hingga
           </ImageInput>
         </FormTab>
       </TabbedForm>
-    </Create>
+    </Edit>
   ) : null;
 };
 
-export default SimCreate;
+export default SimEdit;

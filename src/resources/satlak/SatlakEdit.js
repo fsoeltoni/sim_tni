@@ -53,6 +53,14 @@ const SatlakEdit = props => {
           >
             <AutocompleteInput optionText="kode" />
           </ReferenceInput>
+          <ReferenceInput
+            source="korps_komandan_id"
+            reference="korps"
+            label="Korps Komandan"
+            sort={{ field: "id", order: "ASC" }}
+          >
+            <AutocompleteInput optionText="kode" />
+          </ReferenceInput>
         </FormTab>
         <FormTab label="Tanda Tangan Komandan">
           <SignaturePadInput />

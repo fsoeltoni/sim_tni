@@ -14,13 +14,9 @@ import ImageBase64Field from "../../helpers/components/ImageBase64Field";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 
 const SatlakCreate = props => {
-  const initialValues = {
-    korps_komandan_id: 9
-  };
-
   return (
     <Create {...props} title="Tambah SATLAK">
-      <TabbedForm initialValues={initialValues} variant="outlined">
+      <TabbedForm variant="outlined">
         <FormTab label="Keterangan">
           <ReferenceInput
             source="lingkup_id"
@@ -49,6 +45,14 @@ const SatlakCreate = props => {
             source="pangkat_komandan_id"
             reference="pangkat"
             label="Pangkat Komandan"
+            sort={{ field: "id", order: "ASC" }}
+          >
+            <AutocompleteInput optionText="kode" />
+          </ReferenceInput>
+          <ReferenceInput
+            source="korps_komandan_id"
+            reference="korps"
+            label="Korps Komandan"
             sort={{ field: "id", order: "ASC" }}
           >
             <AutocompleteInput optionText="kode" />
