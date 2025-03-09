@@ -1,9 +1,12 @@
 const { override } = require("customize-cra");
 
 module.exports = override((config) => {
-  config.resolve.fallback = {
-    ...config.resolve.fallback,
-    encoding: false, // Fix untuk error encoding/lib/iconv-loader.js
+  if (!config.resolve) {
+    config.resolve = {};
+  }
+  config.resolve.alias = {
+    ...config.resolve.alias,
+    path: require.resolve("path-browserify"),
   };
   return config;
 });
