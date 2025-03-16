@@ -1,16 +1,16 @@
 import React from "react";
 import {
   FormDataConsumer,
-  Create,
+  Edit,
   SimpleForm,
   ReferenceInput,
   SelectInput,
   TextInput
 } from "react-admin";
 
-const PenggunaCreate = ({ permissions, ...props }) => {
+const PenggunaEdit = ({ permissions, ...props }) => {
   return permissions ? (
-    <Create {...props} title="Tambah Pengguna">
+    <Edit {...props} title="Tambah Pengguna">
       <SimpleForm variant="outlined">
         <ReferenceInput
           source="lingkup_id"
@@ -75,8 +75,8 @@ const PenggunaCreate = ({ permissions, ...props }) => {
         <TextInput source="nrp_nip" label="NRP/NIP" />
         <TextInput source="kata_sandi" label="Kata Sandi" />
       </SimpleForm>
-    </Create>
+    </Edit>
   ) : null;
 };
 
-export default PenggunaCreate;
+export default PenggunaEdit;

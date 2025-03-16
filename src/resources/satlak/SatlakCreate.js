@@ -8,19 +8,67 @@ import {
   AutocompleteInput,
   TextInput,
   NumberInput,
-  ImageInput
+  FileInput,
+  FileField,
+  useNotify,
 } from "react-admin";
-import ImageBase64Field from "../../helpers/components/ImageBase64Field";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
+import StempelInput from "../../helpers/input/StempelInput";
+import dataProvider from "../../providers/data";
 
-const SatlakCreate = props => {
-  const initialValues = {
-    korps_komandan_id: 9
+// Custom component for file uploads using the dataProvider
+const SupabaseFileInput = (props) => {
+  const {
+    source,
+    label,
+    accept = "image/*",
+    bucketName = "images",
+    folderPath = "stempel",
+  } = props;
+  const notify = useNotify();
+
+  const handleFileUpload = async (files) => {
+    if (!files || !files.length) return;
+
+    try {
+      const file = files[0];
+      // Use the dataProvider's uploadFile method
+      const { url, path } = await dataProvider.uploadFile(
+        file,
+        bucketName,
+        folderPath
+      );
+
+      // Format the data as needed for your database
+      return {
+        src: url,
+        path: path,
+        bucket: bucketName,
+        title: file.name,
+      };
+    } catch (error) {
+      notify(`Upload error: ${error.message}`, { type: "error" });
+      return null;
+    }
   };
 
   return (
+    <FileInput
+      source={source}
+      label={label}
+      accept={accept}
+      parse={handleFileUpload}
+      multiple={false}
+    >
+      <FileField source="src" title="title" />
+    </FileInput>
+  );
+};
+
+const SatlakCreate = (props) => {
+  return (
     <Create {...props} title="Tambah SATLAK">
-      <TabbedForm initialValues={initialValues} variant="outlined">
+      <TabbedForm variant="outlined">
         <FormTab label="Keterangan">
           <ReferenceInput
             source="lingkup_id"
@@ -53,19 +101,20 @@ const SatlakCreate = props => {
           >
             <AutocompleteInput optionText="kode" />
           </ReferenceInput>
+          <ReferenceInput
+            source="korps_komandan_id"
+            reference="korps"
+            label="Korps Komandan"
+            sort={{ field: "id", order: "ASC" }}
+          >
+            <AutocompleteInput optionText="kode" />
+          </ReferenceInput>
         </FormTab>
         <FormTab label="Tanda Tangan Komandan">
           <SignaturePadInput />
         </FormTab>
         <FormTab label="Stempel">
-          <ImageInput
-            source="stempel"
-            label="Stempel"
-            accept="image/*"
-            multiple={false}
-          >
-            <ImageBase64Field source="src" title="stempel" />
-          </ImageInput>
+          <StempelInput source="stempel" label="Stempel" />
         </FormTab>
       </TabbedForm>
     </Create>

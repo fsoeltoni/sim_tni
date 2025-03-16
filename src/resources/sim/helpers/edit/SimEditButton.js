@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { useForm } from "react-final-form";
 import { SaveButton, useDataProvider, useRedirect } from "react-admin";
 
-const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
+const SimEditButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
   const form = useForm();
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
@@ -30,9 +30,10 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
     [dataProvider]
   );
 
-  const createSim = useCallback(
-    async data => {
-      const { data: sim } = await dataProvider.create("sim", {
+  const updateSim = useCallback(
+    async (data, id) => {
+      const { data: sim } = await dataProvider.update("sim", {
+        id: id,
         data: { ...data }
       });
 
@@ -42,39 +43,44 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
   );
 
   const handleClick = useCallback(async () => {
-    const { pemohon, pemohon_id, ...rest } = form.getState().values;
+    const { pemohon, pemohon_id, id, ...rest } = form.getState().values;
 
     if (pemohon_id) {
       const updatedPemohon = await updatePemohon(pemohon_id, pemohon);
 
       if (updatedPemohon) {
-        const createdSim = await createSim({
-          ...rest,
-          pemohon_id: updatedPemohon.id
-        });
+        const updatedSim = await updateSim(
+          {
+            ...rest,
+            pemohon_id: updatedPemohon.id
+          },
+          id
+        );
 
-        if (createdSim) {
-          redirect(`${basePath}/print_depan/${createdSim.id}`);
+        if (updatedSim) {
+          redirect(`${basePath}/print_depan/${updatedSim.id}`);
         }
       }
     } else {
       const createdPemohon = await createPemohon(pemohon);
 
       if (createdPemohon) {
-        const createdSim = await createSim({
-          ...rest,
-          pemohon_id: createdPemohon.id
-        });
+        const updatedSim = await updateSim(
+          {
+            ...rest,
+            pemohon_id: createdPemohon.id
+          },
+          id
+        );
 
-        if (createdSim) {
-          console.log(createdSim);
-          redirect(`${basePath}/print_depan/${createdSim.id}`);
+        if (updatedSim) {
+          redirect(`${basePath}/print_depan/${updatedSim.id}`);
         }
       }
     }
-  }, [createPemohon, createSim, form, redirect, updatePemohon]);
+  }, [createPemohon, updateSim, form, redirect, updatePemohon]);
 
   return <SaveButton {...props} handleSubmitWithRedirect={handleClick} />;
 };
 
-export default SimCreateButton;
+export default SimEditButton;

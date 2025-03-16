@@ -12,54 +12,73 @@ import auth from "./providers/auth";
 import PemohonList from "./resources/pemohon/PemohonList";
 import route from "./providers/route";
 import SatlakEdit from "./resources/satlak/SatlakEdit";
+import PenggunaEdit from "./resources/pengguna/PenggunaEdit";
+import PemohonEdit from "./resources/pemohon/PemohonEdit";
+import SimEdit from "./resources/sim/SimEdit";
+import AppLayout from "./layout/AppLayout";
+import myTheme from "./layout/MyTheme";
+import Dashboard from "./layout/dashboard/Dashboard";
 
 const dataProvider = data;
 const authProvider = auth;
 const customRoutes = route;
+const appLayout = AppLayout;
 
 const App = () => (
   <Admin
     title={title}
+    dashboard={Dashboard}
     authProvider={authProvider}
     dataProvider={dataProvider}
     customRoutes={customRoutes}
+    layout={appLayout}
+    theme={myTheme}
   >
-    <Resource
-      name="sim"
-      options={{ label: "SIM" }}
-      create={SimCreate}
-      list={SimList}
-    />
-    <Resource
-      name="pemohon"
-      options={{ label: "Pemohon" }}
-      list={PemohonList}
-    />
-    <Resource
-      name="pengguna"
-      options={{ label: "Pengguna" }}
-      create={PenggunaCreate}
-      list={PenggunaList}
-    />
-    <Resource name="jenis_pengguna" />
-    <Resource
-      name="satlak"
-      options={{ label: "SATLAK" }}
-      create={SatlakCreate}
-      edit={SatlakEdit}
-      list={SatlakList}
-    />
-    <Resource name="ibukota_provinsi" />
-    <Resource name="lingkup" />
-    <Resource name="permohonan_sim_tni" />
-    <Resource name="golongan_sim_tni" />
-    <Resource name="kualifikasi_pengemudi" />
-    <Resource name="jenis_pemohon" />
-    <Resource name="golongan_pns" />
-    <Resource name="korps" />
-    <Resource name="pangkat" />
-    <Resource name="jenjang_kepangkatan" />
-    <Resource name="golongan_darah" />
+    {permissions => [
+      <Resource
+        name="sim"
+        options={{ label: "SIM" }}
+        create={SimCreate}
+        edit={SimEdit}
+        list={SimList}
+      />,
+      <Resource
+        name="pemohon"
+        options={{ label: "Pemohon" }}
+        edit={PemohonEdit}
+        list={PemohonList}
+      />,
+      <Resource
+        name="pengguna"
+        options={{ label: "Pengguna" }}
+        create={PenggunaCreate}
+        edit={PenggunaEdit}
+        list={PenggunaList}
+      />,
+      <Resource name="jenis_pengguna" />,
+      <Resource
+        name="satlak"
+        options={{ label: "SATLAK" }}
+        create={
+          permissions.satlak_id === 1 && permissions.jenis_pengguna_id === 1
+            ? SatlakCreate
+            : null
+        }
+        edit={SatlakEdit}
+        list={SatlakList}
+      />,
+      <Resource name="ibukota_provinsi" />,
+      <Resource name="lingkup" />,
+      <Resource name="permohonan_sim_tni" />,
+      <Resource name="golongan_sim_tni" />,
+      <Resource name="kualifikasi_pengemudi" />,
+      <Resource name="jenis_pemohon" />,
+      <Resource name="golongan_pns" />,
+      <Resource name="korps" />,
+      <Resource name="pangkat" />,
+      <Resource name="jenjang_kepangkatan" />,
+      <Resource name="golongan_darah" />
+    ]}
   </Admin>
 );
 
