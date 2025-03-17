@@ -5,7 +5,7 @@ import {
   TextField,
   ReferenceField,
   EditButton,
-  DeleteButton
+  DeleteButton,
 } from "react-admin";
 import KodeSatlakField from "../satlak/helpers/KodeSatlakField";
 
@@ -13,8 +13,9 @@ const PenggunaList = ({ permissions, ...props }) => {
   if (permissions) {
     const filter =
       permissions && permissions.satlak_id !== 1
-        ? { satlak_id: permissions.satlak_id }
+        ? { id: permissions.satlak_id }
         : null;
+
     return (
       <List
         {...props}

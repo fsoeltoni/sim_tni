@@ -24,62 +24,65 @@ const authProvider = auth;
 const customRoutes = route;
 const appLayout = AppLayout;
 
-const App = () => (
-  <Admin
-    title={title}
-    dashboard={Dashboard}
-    authProvider={authProvider}
-    dataProvider={dataProvider}
-    customRoutes={customRoutes}
-    layout={appLayout}
-    theme={myTheme}
-  >
-    {permissions => [
-      <Resource
-        name="sim"
-        options={{ label: "SIM" }}
-        create={SimCreate}
-        edit={SimEdit}
-        list={SimList}
-      />,
-      <Resource
-        name="pemohon"
-        options={{ label: "Pemohon" }}
-        edit={PemohonEdit}
-        list={PemohonList}
-      />,
-      <Resource
-        name="pengguna"
-        options={{ label: "Pengguna" }}
-        create={PenggunaCreate}
-        edit={PenggunaEdit}
-        list={PenggunaList}
-      />,
-      <Resource name="jenis_pengguna" />,
-      <Resource
-        name="satlak"
-        options={{ label: "SATLAK" }}
-        create={
-          permissions.satlak_id === 1 && permissions.jenis_pengguna_id === 1
-            ? SatlakCreate
-            : null
-        }
-        edit={SatlakEdit}
-        list={SatlakList}
-      />,
-      <Resource name="ibukota_provinsi" />,
-      <Resource name="lingkup" />,
-      <Resource name="permohonan_sim_tni" />,
-      <Resource name="golongan_sim_tni" />,
-      <Resource name="kualifikasi_pengemudi" />,
-      <Resource name="jenis_pemohon" />,
-      <Resource name="golongan_pns" />,
-      <Resource name="korps" />,
-      <Resource name="pangkat" />,
-      <Resource name="jenjang_kepangkatan" />,
-      <Resource name="golongan_darah" />
-    ]}
-  </Admin>
-);
+const App = () => {
+  console.log("INI ADALAH APP");
+  return (
+    <Admin
+      title={title}
+      dashboard={Dashboard}
+      authProvider={authProvider}
+      dataProvider={dataProvider}
+      customRoutes={customRoutes}
+      layout={appLayout}
+      theme={myTheme}
+    >
+      {(permissions) => [
+        <Resource
+          name="sim"
+          options={{ label: "SIM" }}
+          create={SimCreate}
+          edit={SimEdit}
+          list={SimList}
+        />,
+        <Resource
+          name="pemohon"
+          options={{ label: "Pemohon" }}
+          edit={PemohonEdit}
+          list={PemohonList}
+        />,
+        <Resource
+          name="pengguna"
+          options={{ label: "Pengguna" }}
+          create={PenggunaCreate}
+          edit={PenggunaEdit}
+          list={PenggunaList}
+        />,
+        <Resource name="jenis_pengguna" />,
+        <Resource
+          name="satlak"
+          options={{ label: "SATLAK" }}
+          create={
+            permissions.satlak_id === 1 && permissions.jenis_pengguna_id === 1
+              ? SatlakCreate
+              : null
+          }
+          edit={SatlakEdit}
+          list={SatlakList}
+        />,
+        <Resource name="ibukota_provinsi" />,
+        <Resource name="lingkup" />,
+        <Resource name="permohonan_sim_tni" />,
+        <Resource name="golongan_sim_tni" />,
+        <Resource name="kualifikasi_pengemudi" />,
+        <Resource name="jenis_pemohon" />,
+        <Resource name="golongan_pns" />,
+        <Resource name="korps" />,
+        <Resource name="pangkat" />,
+        <Resource name="jenjang_kepangkatan" />,
+        <Resource name="golongan_darah" />,
+      ]}
+    </Admin>
+  );
+};
 
 export default App;

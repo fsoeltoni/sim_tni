@@ -7,7 +7,7 @@ import {
   TextField,
   EditButton,
   DeleteButton,
-  downloadCSV
+  downloadCSV,
 } from "react-admin";
 import jsonExport from "jsonexport/dist";
 
@@ -25,18 +25,18 @@ const exporter = async (records, fetchRelatedRecords) => {
     "permohonan_sim_tni"
   );
 
-  const data = records.map(record => ({
+  const data = records.map((record) => ({
     ...record,
     satlak: satlak[record.satlak_id].kode,
     pemohon: pemohon[record.pemohon_id].nama,
     golongan: golongan_sim_tni[record.golongan_sim_tni_id].nama,
-    permohonan: permohonan_sim_tni[record.permohonan_sim_tni_id].nama
+    permohonan: permohonan_sim_tni[record.permohonan_sim_tni_id].nama,
   }));
 
   jsonExport(
     data,
     {
-      headers: ["id", "satlak", "pemohon", "golongan", "permohonan"]
+      headers: ["id", "satlak", "pemohon", "golongan", "permohonan"],
     },
     (err, csv) => {
       downloadCSV(csv, "sim");
@@ -48,7 +48,7 @@ const SimList = ({ permissions, ...rest }) => {
   if (permissions) {
     const filter =
       permissions && permissions.satlak_id !== 1
-        ? { satlak_id: permissions.satlak_id }
+        ? { id: permissions.satlak_id }
         : null;
 
     return (
