@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { useForm } from "react-final-form";
 import { SaveButton, useDataProvider, useRedirect } from "react-admin";
+import moment from "moment";
 
 const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
   const form = useForm();
@@ -11,7 +12,7 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
     async (id, data) => {
       const { data: pemohon } = await dataProvider.update("pemohon", {
         id: id,
-        data: { ...data }
+        data: { ...data },
       });
 
       return pemohon;
@@ -20,9 +21,9 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
   );
 
   const createPemohon = useCallback(
-    async data => {
+    async (data) => {
       const { data: pemohon } = await dataProvider.create("pemohon", {
-        data: { ...data }
+        data: { ...data },
       });
 
       return pemohon;
@@ -31,9 +32,12 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
   );
 
   const createSim = useCallback(
-    async data => {
+    async (data) => {
       const { data: sim } = await dataProvider.create("sim", {
-        data: { ...data }
+        data: {
+          ...data,
+          berlaku_hingga: moment(data.created).add(5, "y").format("YYYY-MM-DD"),
+        },
       });
 
       return sim;
@@ -50,7 +54,7 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
       if (updatedPemohon) {
         const createdSim = await createSim({
           ...rest,
-          pemohon_id: updatedPemohon.id
+          pemohon_id: updatedPemohon.id,
         });
 
         if (createdSim) {
@@ -63,7 +67,7 @@ const SimCreateButton = ({ handleSubmitWithRedirect, basePath, ...props }) => {
       if (createdPemohon) {
         const createdSim = await createSim({
           ...rest,
-          pemohon_id: createdPemohon.id
+          pemohon_id: createdPemohon.id,
         });
 
         if (createdSim) {

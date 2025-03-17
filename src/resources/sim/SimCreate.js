@@ -29,15 +29,11 @@ const SimCreate = ({ permissions, ...props }) => {
 
   useEffect(() => {
     if (permissions) {
-      const created = moment(now).format("YYYY-MM-DD");
       const updated = moment(now).format("YYYY-MM-DD");
-      const berlaku_hingga = moment(created).add(5, "y").format("YYYY-MM-DD");
 
       setInitialValues({
         satlak_id: permissions.satlak_id,
-        created,
         updated,
-        berlaku_hingga,
       });
     }
   }, [permissions]);
@@ -69,11 +65,19 @@ const SimCreate = ({ permissions, ...props }) => {
     try {
       console.log("Pre-upload values for sidik_jari:", values.sidik_jari);
       // Use the data provider's create method with file field configurations
+
       const result = await dataProvider.create(
         "sim",
-        { data: values },
+        {
+          data: values,
+          berlaku_hingga: moment(values.created)
+            .add(5, "y")
+            .format("YYYY-MM-DD"),
+        },
         fileFields
       );
+
+      console.log(result);
       return result;
     } catch (error) {
       console.error("Error saving SIM data:", error);
@@ -90,6 +94,7 @@ const SimCreate = ({ permissions, ...props }) => {
         save={handleSave}
       >
         <FormTab label="Keterangan">
+          <DateInput source="created" label="Tanggal Permohonan" />
           <ReferenceInput
             source="permohonan_sim_tni_id"
             reference="permohonan_sim_tni"

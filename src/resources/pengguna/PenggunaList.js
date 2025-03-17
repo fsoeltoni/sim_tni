@@ -13,7 +13,7 @@ const PenggunaList = ({ permissions, ...props }) => {
   if (permissions) {
     const filter =
       permissions && permissions.satlak_id !== 1
-        ? { id: permissions.satlak_id }
+        ? { satlak_id: permissions.satlak_id }
         : null;
 
     return (

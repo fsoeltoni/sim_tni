@@ -25,7 +25,6 @@ const customRoutes = route;
 const appLayout = AppLayout;
 
 const App = () => {
-  console.log("INI ADALAH APP");
   return (
     <Admin
       title={title}
