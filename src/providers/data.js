@@ -11,60 +11,55 @@ const supabaseClient = createClient(
  * @param {Object} filter - React Admin filter object
  * @returns {Array} - Array of filter operations for Supabase
  */
-const mapFilters = (filter) => {
-  const filters = [];
+const KNOWN_OPERATORS = ["gte", "lte", "gt", "lt", "neq", "like", "ilike", "in"];
 
-  Object.keys(filter).forEach((key) => {
-    const value = filter[key];
+const mapFilters = (filterObject) => {
+  const supabaseFilters = [];
 
-    // Handle special operators like _gte, _lte, etc.
-    if (key.includes("_")) {
-      const [field, operator] = key.split("_");
+  Object.keys(filterObject).forEach((key) => {
+    const value = filterObject[key];
+    let operatorFoundAndHandled = false;
 
-      switch (operator) {
-        case "gte":
-          filters.push((query) => query.gte(field, value));
-          break;
-        case "lte":
-          filters.push((query) => query.lte(field, value));
-          break;
-        case "gt":
-          filters.push((query) => query.gt(field, value));
-          break;
-        case "lt":
-          filters.push((query) => query.lt(field, value));
-          break;
-        case "neq":
-          filters.push((query) => query.neq(field, value));
-          break;
-        case "like":
-          filters.push((query) => query.ilike(field, `%${value}%`));
-          break;
-        case "ilike":
-          filters.push((query) => query.ilike(field, `%${value}%`));
-          break;
-        case "in":
-          if (Array.isArray(value)) {
-            filters.push((query) => query.in(field, value));
+    for (const op of KNOWN_OPERATORS) {
+      const suffix = `_${op}`;
+      if (key.endsWith(suffix)) {
+        const field = key.slice(0, -suffix.length);
+        if (field) {
+          operatorFoundAndHandled = true;
+          // console.log(`[mapFilters] Operator Dikenali. Key: "${key}", Field: "${field}", Operator: "${op}", Value:`, value);
+          switch (op) {
+            case "gte": supabaseFilters.push((query) => query.gte(field, value)); break;
+            case "lte": supabaseFilters.push((query) => query.lte(field, value)); break;
+            case "gt": supabaseFilters.push((query) => query.gt(field, value)); break;
+            case "lt": supabaseFilters.push((query) => query.lt(field, value)); break;
+            case "neq": supabaseFilters.push((query) => query.neq(field, value)); break;
+            case "like": case "ilike": supabaseFilters.push((query) => query.ilike(field, `%${value}%`)); break;
+            case "in":
+              if (Array.isArray(value)) {
+                supabaseFilters.push((query) => query.in(field, value));
+              } else { /* warning */ }
+              break;
+            default: operatorFoundAndHandled = false; // Fallback
           }
-          break;
-        default:
-          // For custom operators not handled above
-          console.warn(`Operator ${operator} not implemented`);
+        }
+        break;
       }
-    } else {
-      // Handle direct equality
+    }
+
+    if (!operatorFoundAndHandled) {
+      // console.log(`[mapFilters] Direct Equality. Key: "${key}", Value:`, value);
       if (value === null) {
-        filters.push((query) => query.is(key, null));
+        supabaseFilters.push((query) => query.is(key, null));
       } else if (Array.isArray(value)) {
-        filters.push((query) => query.in(key, value));
+        supabaseFilters.push((query) => query.in(key, value));
+      } else if (value !== undefined) { // Pencegahan untuk tidak mengirim 'undefined' ke .eq()
+        supabaseFilters.push((query) => query.eq(key, value));
       } else {
-        filters.push((query) => query.eq(key, value));
+        // console.warn(`[mapFilters] Mengabaikan filter untuk key "${key}" karena nilainya undefined.`);
       }
     }
   });
-
-  return filters;
+  return supabaseFilters;
 };
 
 /**

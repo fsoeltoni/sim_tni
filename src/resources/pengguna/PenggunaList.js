@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react"; // useEffect, useState tidak digunakan di sini
 import {
   List,
   Datagrid,
@@ -10,18 +10,32 @@ import {
 import KodeSatlakField from "../satlak/helpers/KodeSatlakField";
 
 const PenggunaList = ({ permissions, ...props }) => {
+  // --- AWAL BLOK DEBUG ---
+  console.log("[PenggunaList] Props diterima:", props);
+  console.log("[PenggunaList] Permissions diterima:", permissions);
+
   if (permissions) {
+    console.log("[PenggunaList] permissions.satlak_id:", permissions.satlak_id);
+    console.log(
+      "[PenggunaList] Kondisi (permissions.satlak_id !== 1):",
+      permissions.satlak_id !== 1
+    );
+
+    // Pastikan kita menggunakan permissions.satlak_id dari object permissions yang sudah dicek
     const filter =
-      permissions && permissions.satlak_id !== 1
+      permissions.satlak_id !== 1
         ? { satlak_id: permissions.satlak_id }
         : null;
+
+    console.log("[PenggunaList] Filter yang akan diterapkan:", filter);
+    // --- AKHIR BLOK DEBUG ---
 
     return (
       <List
         {...props}
         title="Daftar Pengguna"
         sort={{ field: "id", order: "ASC" }}
-        filter={filter}
+        filter={filter} // Pastikan filter ini yang digunakan oleh List
       >
         <Datagrid>
           <TextField source="id" label="Id" />
@@ -60,6 +74,7 @@ const PenggunaList = ({ permissions, ...props }) => {
       </List>
     );
   } else {
+    console.warn("[PenggunaList] Object permissions tidak tersedia.");
     return null;
   }
 };

@@ -39,8 +39,9 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const CameraComponent = ({
   input: { onChange },
-  bucketName = "gambar",
-  folderPath = "camera-photos",
+  bucketName = "gambar", // Default jika tidak ada prop bucketName yang diberikan
+  folderPath = "camera-photos", // Default jika tidak ada prop folderPath yang diberikan
+  // Anda juga akan menerima 'source', 'label' dll dari props yang diteruskan oleh <Field>
   ...rest
 }) => {
   const classes = useStyles();
@@ -65,32 +66,23 @@ const CameraComponent = ({
   const uploadToSupabase = async (blob) => {
     try {
       setLoading(true);
-
-      // Buat nama file unik berdasarkan timestamp
       const fileName = `photo_${Date.now()}.jpg`;
-
-      // Buat File object dari blob
       const file = new File([blob], fileName, { type: "image/jpeg" });
 
-      // Gunakan fungsi uploadFile dari data provider
+      // Gunakan bucketName dan folderPath dari props
       const { url, path } = await dataProvider.uploadFile(
         file,
-        bucketName,
-        folderPath
+        bucketName, // <-- Gunakan bucketName dari prop
+        folderPath  // <-- Gunakan folderPath dari prop
       );
 
-      // Buat objek yang akan disimpan di field database
       const fileData = {
         src: url,
         path: path,
-        bucket: bucketName,
+        bucket: bucketName, // Simpan juga bucket yang digunakan
         title: fileName,
       };
-
-      // Simpan ke dalam field via onChange
       onChange(fileData);
-
-      // Simpan preview untuk ditampilkan
       setPreview(url);
     } catch (error) {
       console.error("Error uploading image:", error);

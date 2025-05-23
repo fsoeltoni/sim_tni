@@ -9,7 +9,12 @@ import {
   TextInput,
   DateInput,
   FormDataConsumer,
+  ImageInput,
+  ImageField,
 } from "react-admin";
+
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
 import moment from "moment";
 import NoIdentitasInput from "./helpers/input/NoIdentitasInput";
 import isBiiSus from "./helpers/input/conditions/isBiiSus";
@@ -22,6 +27,11 @@ import FingerprintInput from "../../helpers/input/FingerprintInput";
 import CameraInput from "../../helpers/input/CameraInput";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 import dataProvider from "../../providers/data";
+
+const SIM_PAS_FOTO_BUCKET = "gambar";
+const SIM_PAS_FOTO_FOLDER = "pasfoto_sim";
+const SIM_TANDA_TANGAN_FOLDER = "tanda_tangan_sim";
+const SIM_SIDIK_JARI_FOLDER = "sidik_jari_sim";
 
 const SimCreate = ({ permissions, ...props }) => {
   const [initialValues, setInitialValues] = useState();
@@ -38,24 +48,24 @@ const SimCreate = ({ permissions, ...props }) => {
     }
   }, [permissions]);
 
-  // Define file field configurations for create/update operations
+  // Updated file field configurations with consistent naming
   const fileFields = [
     {
       source: "pas_foto",
-      bucket: "gambar",
-      folder: "camera-photos",
+      bucket: SIM_PAS_FOTO_BUCKET,
+      folder: SIM_PAS_FOTO_FOLDER,
       fileNameField: "pas_foto_path",
     },
     {
       source: "tanda_tangan",
-      bucket: "gambar",
-      folder: "signatures",
+      bucket: SIM_PAS_FOTO_BUCKET, // Using same bucket for consistency
+      folder: SIM_TANDA_TANGAN_FOLDER,
       fileNameField: "tanda_tangan_path",
     },
     {
       source: "sidik_jari",
-      bucket: "gambar",
-      folder: "fingerprints",
+      bucket: SIM_PAS_FOTO_BUCKET, // Using same bucket for consistency
+      folder: SIM_SIDIK_JARI_FOLDER,
       fileNameField: "sidik_jari_path",
     },
   ];
@@ -219,7 +229,29 @@ const SimCreate = ({ permissions, ...props }) => {
           </FormDataConsumer>
         </FormTab>
         <FormTab label="Pas Foto">
-          <CameraInput />
+          <Typography variant="subtitle1" gutterBottom>
+            Opsi 1: Ambil Foto Langsung dari Kamera
+          </Typography>
+          <CameraInput
+            source="pas_foto"
+            label="Ambil Foto dari Kamera"
+            bucketName={SIM_PAS_FOTO_BUCKET}
+            folderPath={SIM_PAS_FOTO_FOLDER}
+          />
+
+          <Box mt={3} mb={1}>
+            <Typography variant="subtitle1" gutterBottom>
+              Opsi 2: Unggah File Gambar
+            </Typography>
+          </Box>
+          <ImageInput
+            source="pas_foto"
+            label="Pilih atau seret file pas foto"
+            accept="image/*"
+            placeholder={<p>Letakkan file di sini atau klik untuk memilih</p>}
+          >
+            <ImageField source="src" title="title" />
+          </ImageInput>
         </FormTab>
         <FormTab label="Tanda Tangan">
           <SignaturePadInput />

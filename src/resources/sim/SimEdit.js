@@ -11,6 +11,10 @@ import {
   FormDataConsumer,
   ImageInput,
 } from "react-admin";
+
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
+
 import moment from "moment";
 import NoIdentitasInput from "./helpers/input/NoIdentitasInput";
 import isBiiSus from "./helpers/input/conditions/isBiiSus";
@@ -19,10 +23,15 @@ import isPrajuritTniAd from "./helpers/input/conditions/isPrajuritTniAd";
 import isPnsTniAd from "./helpers/input/conditions/isPnsTniAd";
 import InputJenisPemohon from "./helpers/input/InputJenisPemohon";
 import SimEditToolbar from "./helpers/edit/SimEditToolbar";
-import ImageField from "../../helpers/input/components/ImageField";
+import CustomImageField from "../../helpers/input/components/ImageField";
 import CameraInput from "../../helpers/input/CameraInput";
 import SignaturePadInput from "../../helpers/input/SignaturePadInput";
 import dataProvider from "../../providers/data";
+
+const SIM_PAS_FOTO_BUCKET = "gambar";
+const SIM_PAS_FOTO_FOLDER = "pasfoto_sim";
+const SIM_TANDA_TANGAN_FOLDER = "tanda_tangan_sim";
+const SIM_SIDIK_JARI_FOLDER = "sidik_jari_sim";
 
 // Fungsi untuk menormalisasi bidang file dalam record
 const normalizeFileField = (record) => {
@@ -40,6 +49,30 @@ const normalizeFileField = (record) => {
         src: recordCopy[field],
         title: field,
       };
+    }
+  });
+
+  return recordCopy;
+};
+
+const normalizeFileFieldForDisplay = (record, fileFieldConfigurations) => {
+  if (!record) return record;
+  const recordCopy = { ...record };
+
+  fileFieldConfigurations.forEach(({ source, fileNameField }) => {
+    const fileValue = recordCopy[source];
+    const filePath = recordCopy[fileNameField];
+
+    if (fileValue && typeof fileValue === "string" && fileValue.startsWith('http')) {
+      recordCopy[source] = {
+        src: fileValue,
+        title: source,
+        path: filePath || fileValue,
+      };
+    } else if (typeof fileValue === 'object' && fileValue !== null && typeof fileValue.src === 'string' && fileValue.src.startsWith('http')) {
+      if (!fileValue.path && filePath) {
+        recordCopy[source].path = filePath;
+      }
     }
   });
 
@@ -64,20 +97,20 @@ const SimEdit = ({ permissions, ...props }) => {
   const fileFields = [
     {
       source: "pas_foto",
-      bucket: "gambar",
-      folder: "camera-photos",
+      bucket: SIM_PAS_FOTO_BUCKET,
+      folder: SIM_PAS_FOTO_FOLDER,
       fileNameField: "pas_foto_path",
     },
     {
       source: "tanda_tangan",
-      bucket: "gambar",
-      folder: "signatures",
+      bucket: SIM_PAS_FOTO_BUCKET,
+      folder: SIM_TANDA_TANGAN_FOLDER,
       fileNameField: "tanda_tangan_path",
     },
     {
       source: "sidik_jari",
-      bucket: "gambar",
-      folder: "fingerprints",
+      bucket: SIM_PAS_FOTO_BUCKET,
+      folder: SIM_SIDIK_JARI_FOLDER,
       fileNameField: "sidik_jari_path",
     },
   ];
@@ -138,6 +171,11 @@ const SimEdit = ({ permissions, ...props }) => {
     return normalizedData;
   };
 
+  const transformForDisplay = (data) => {
+    if (!data) return data;
+    return normalizeFileFieldForDisplay(data, fileFields);
+  };
+
   return permissions ? (
     <Edit {...props} title="Edit SIM" transform={transform}>
       <TabbedForm
@@ -179,6 +217,7 @@ const SimEdit = ({ permissions, ...props }) => {
             }
           </FormDataConsumer>
         </FormTab>
+
         <FormTab label="Pemohon">
           <InputJenisPemohon />
           <FormDataConsumer subscription={{ values: true }}>
@@ -271,20 +310,50 @@ const SimEdit = ({ permissions, ...props }) => {
             }
           </FormDataConsumer>
         </FormTab>
-        <FormTab label="Pas Foto">
-          <CameraInput source="pas_foto" />
+
+        <FormTab label="Pas Foto" path="pas_foto">
+          <Typography variant="subtitle1" gutterBottom>
+            Opsi 1: Ambil Foto Langsung dari Kamera
+          </Typography>
+          <CameraInput
+            source="pas_foto"
+            label="Ambil/Ganti Foto dari Kamera"
+            bucketName={SIM_PAS_FOTO_BUCKET}
+            folderPath={SIM_PAS_FOTO_FOLDER}
+          />
+
+          <Box mt={3} mb={1}>
+            <Typography variant="subtitle1" gutterBottom>
+              Opsi 2: Unggah File Gambar Baru
+            </Typography>
+          </Box>
+          <ImageInput
+            source="pas_foto"
+            label="Pilih atau seret file pas foto baru"
+            accept="image/*"
+            placeholder={<p>Letakkan file baru di sini jika ingin mengganti</p>}
+          >
+            <CustomImageField source="src" title="title" />
+          </ImageInput>
+          <Box mt={2}>
+            <Typography variant="caption">
+              Catatan: Jika Anda mengambil foto baru atau mengunggah file baru, foto lama akan diganti saat disimpan.
+            </Typography>
+          </Box>
         </FormTab>
+
         <FormTab label="Tanda Tangan">
           <SignaturePadInput source="tanda_tangan" />
         </FormTab>
+
         <FormTab label="Sidik Jari">
           <ImageInput
             source="sidik_jari"
-            label="Sidik Jari"
+            label="Unggah Gambar Sidik Jari Baru"
             accept="image/*"
-            multiple={false}
+            placeholder={<p>Letakkan file baru di sini jika ingin mengganti</p>}
           >
-            <ImageField source="src" title="sidik_jari" />
+            <CustomImageField source="src" title="title" />
           </ImageInput>
         </FormTab>
       </TabbedForm>

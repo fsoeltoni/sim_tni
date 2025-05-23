@@ -45,18 +45,29 @@ const exporter = async (records, fetchRelatedRecords) => {
 };
 
 const SimList = ({ permissions, ...rest }) => {
+  // Tambahkan log untuk melihat permissions saat komponen ini dirender
+  // console.log("[SimList] Permissions diterima:", permissions);
+
   if (permissions) {
-    const filter =
-      permissions && permissions.satlak_id !== 1
-        ? { id: permissions.satlak_id }
-        : null;
+    let simFilter = null; // Default filter adalah null (tidak ada filter)
+
+    // Hanya terapkan filter satlak_id jika permissions.satlak_id adalah angka yang valid
+    // dan bukan 1 (untuk admin)
+    if (typeof permissions.satlak_id === 'number' && permissions.satlak_id !== 1) {
+      simFilter = { satlak_id: permissions.satlak_id };
+    }
+    // Jika permissions.satlak_id adalah 1, atau undefined, atau null, atau bukan angka,
+    // maka simFilter akan tetap null.
+
+    // console.log("[SimList] Filter yang diterapkan untuk SIM:", simFilter);
 
     return (
       <List
         {...rest}
         title="Daftar SIM"
         sort={{ field: "created", order: "DESC" }}
-        filter={filter}
+        filter={simFilter}
+        exporter={exporter}
       >
         <Datagrid>
           <DateField source="created" label="Pada Tanggal" />
@@ -105,6 +116,7 @@ const SimList = ({ permissions, ...rest }) => {
       </List>
     );
   } else {
+    // console.warn("[SimList] Object permissions tidak tersedia.");
     return null;
   }
 };
