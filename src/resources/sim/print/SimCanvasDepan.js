@@ -1237,7 +1237,7 @@ const SimCanvasDepan = forwardRef((props, ref) => {
               text={safeText(nama_komandan)}
               fontSize={9}
               fontStyle="bold"
-              width={165}
+              width={170}
               align="center"
               y={35}
             />
