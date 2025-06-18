@@ -24,17 +24,9 @@ class SignaturePadComponent extends Component {
       this.setState({
         canvas: this.canvasRef.current,
       }, () => {
-        // Setelah canvas diset, gambar preview jika sudah ada
+        // Setelah canvas diset, gambar preview jika sudah ada dan canvas sudah siap
         if (this.state.preview) {
-          const img = new Image();
-          img.onload = () => {
-            const ctx = this.state.canvas.getContext("2d");
-            // Pastikan canvas di-resize sebelum menggambar gambar yang ada
-            this.state.canvas.width = this.canvasRef.current.offsetWidth; // Mengambil lebar aktual dari DOM
-            ctx.clearRect(0, 0, this.state.canvas.width, this.state.canvas.height);
-            ctx.drawImage(img, 0, 0, this.state.canvas.width, this.state.canvas.height);
-          };
-          img.src = this.state.preview;
+          this.drawImageOnCanvas(this.state.preview);
         }
       });
     }
@@ -48,6 +40,25 @@ class SignaturePadComponent extends Component {
     );
   };
 
+  // Fungsi pembantu untuk menggambar gambar di canvas
+  drawImageOnCanvas = (imageUrl) => {
+    const { canvas } = this.state;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      // Pastikan lebar internal canvas sesuai dengan lebar visualnya sebelum menggambar
+      canvas.width = this.canvasRef.current.offsetWidth;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.onerror = (e) => {
+      console.error("Error loading image for canvas display:", e);
+    };
+    img.src = imageUrl;
+  };
+
   startSign = () => {
     const { canvas } = this.state;
     if (!canvas) {
@@ -56,26 +67,37 @@ class SignaturePadComponent extends Component {
       return;
     }
     
-    // Perbarui lebar canvas sebelum membersihkan dan memulai tanda tangan baru
-    canvas.width = this.canvasRef.current.offsetWidth; // Set lebar kanvas sesuai lebar elemen DOM
+    // Perbarui lebar internal canvas agar sesuai dengan lebar visual DOM-nya
+    canvas.width = this.canvasRef.current.offsetWidth;
     canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-    this.setState({ preview: null }); 
+    this.setState({ preview: null }); // Hapus preview lama saat memulai tanda tangan baru
 
+    // Objek pesan yang dioptimalkan untuk SigWeb
+    // Beberapa properti diubah/ditambahkan agar sesuai dengan dokumentasi Topaz SigWeb
     let message = {
-      firstName: "",
-      lastName: "",
-      eMail: "",
-      location: "",
-      imageFormat: 2,
-      imageX: canvas.width, // Gunakan lebar canvas yang sudah diperbarui
-      imageY: canvas.height,
-      imageTransparency: true,
-      imageScaling: false,
-      maxUpScalePercent: 0.0,
-      rawDataFormat: "ENC",
-      minSigPoints: 25,
+      // Default SigWeb. Mengatur properti ini bisa menghasilkan gambar yang lebih baik
+      "QPF_SigWeb_Properties": "PadType=4;Interface=USB;AutoDetect=YES;Port=USB;", 
+      "SigWeb_ImageFormat": "PNG", // Format gambar yang diinginkan (PNG atau JPG)
+      "SigWeb_ImageX": canvas.width, // Lebar gambar yang diminta
+      "SigWeb_ImageY": canvas.height, // Tinggi gambar yang diminta
+      "SigWeb_ImageTransparency": true, // Latar belakang transparan
+      "SigWeb_MinSigPoints": 25, // Jumlah minimum titik untuk tanda tangan valid
+      "SigWeb_RawDataFormat": "ENC", // Format data mentah (ENC disarankan untuk keamanan)
+      // Properti lain yang mungkin Anda ingin sertakan, sesuaikan dengan kebutuhan Anda
+      "SigWeb_PenWidth": 2, // Ketebalan pena
+      "SigWeb_InkColor": "#0000FF", // Warna tinta (biru)
+      "SigWeb_BackgroundColor": "#FFFFFF", // Warna latar belakang (putih)
+      // "SigWeb_EnableHandwritingMode": false, // Jika SigWeb mendukung mode tulisan tangan
+      // "SigWeb_DisplayLCD": "Please sign below", // Pesan di LCD pad (jika ada LCD)
+      
+      // Properti custom Anda (jika ada yang masih relevan untuk data message)
+      // firstName: "", 
+      // lastName: "",
+      // eMail: "",
+      // location: "",
     };
 
+    // Pastikan event listener hanya ditambahkan sekali
     window.top.document.removeEventListener(
       "SignResponse",
       this.signResponse,
@@ -96,6 +118,7 @@ class SignaturePadComponent extends Component {
     evt.initEvent("SignStartEvent", true, false);
     element.dispatchEvent(evt);
     
+    // Hapus elemen setelah event dikirim untuk membersihkan DOM
     document.documentElement.removeChild(element);
   };
 
@@ -107,10 +130,16 @@ class SignaturePadComponent extends Component {
     }
 
     const str = event.target.getAttribute("msgAttribute");
-    const obj = JSON.parse(str);
+    let obj = null;
+    try {
+      obj = JSON.parse(str);
+    } catch (e) {
+      console.error("Failed to parse SignResponse message:", e, str);
+      alert("Gagal memproses data tanda tangan dari perangkat.");
+      return;
+    }
 
-    // Kirim lebar aktual canvas ke setValue
-    await this.setValue(obj, canvas.width, canvas.height);
+    await this.setValue(obj); // Hanya passing obj, lebar/tinggi akan diambil dari canvas di setValue
   };
 
   base64ToBlob = (base64) => {
@@ -139,8 +168,8 @@ class SignaturePadComponent extends Component {
       const fileName = `signature_${Date.now()}.png`;
       const file = new File([blob], fileName, { type: "image/png" });
 
-      const bucketName = "gambar";
-      const folderPath = "signatures";
+      const bucketName = "gambar"; // Sesuaikan dengan nama bucket Anda
+      const folderPath = "signatures"; // Sesuaikan dengan struktur folder Anda
 
       const { url, path } = await dataProvider.uploadFile(
         file,
@@ -172,46 +201,49 @@ class SignaturePadComponent extends Component {
     }
   };
 
-  setValue = async (res, width, height) => {
+  setValue = async (obj) => { // Hanya terima obj
     const { canvas } = this.state;
     if (!canvas) {
       console.error("Canvas element not found in setValue.");
       return;
     }
 
-    let obj = null;
-    try {
-      obj = typeof res === "string" ? JSON.parse(res) : res;
-    } catch (e) {
-      console.error("Failed to parse signature response:", e, res);
-      alert("Gagal memproses data tanda tangan.");
-      return;
-    }
-
     const ctx = canvas.getContext("2d");
 
     if (obj.errorMsg && obj.errorMsg !== "" && obj.errorMsg !== "undefined") {
-      alert(obj.errorMsg);
+      alert("Error dari SigWeb: " + obj.errorMsg);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.setState({ preview: null });
       const { input: { onChange } } = this.props;
       onChange(null);
     } else {
-      if (obj.isSigned) {
+      // Pastikan obj.isSigned ada dan bernilai true
+      if (obj.isSigned && obj.imageData) {
+        const base64ImageFromPad = "data:image/png;base64," + obj.imageData;
+        
+        // Gambar tanda tangan dari SigWeb ke canvas
         const img = new Image();
         img.onload = async () => {
+          // Penting: Pastikan lebar internal canvas sudah diatur
+          canvas.width = this.canvasRef.current.offsetWidth; 
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height); // Gunakan lebar aktual canvas
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           
-          const base64Image = canvas.toDataURL("image/png");
-          await this.uploadToSupabase(base64Image);
+          // Setelah digambar di canvas, baru upload ke Supabase
+          const base64ImageToUpload = canvas.toDataURL("image/png");
+          await this.uploadToSupabase(base64ImageToUpload);
         };
         img.onerror = (e) => {
-            console.error("Error loading signature image:", e);
-            alert("Gagal memuat gambar tanda tangan.");
+            console.error("Error loading signature image from SigWeb data:", e);
+            alert("Gagal memuat gambar tanda tangan dari SigWeb.");
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Bersihkan jika error
+            this.setState({ preview: null });
+            this.props.input.onChange(null);
         };
-        img.src = "data:image/png;base64," + obj.imageData;
+        img.src = base64ImageFromPad;
       } else {
+        // Jika tidak ditandatangani atau data gambar tidak ada
+        alert("Proses tanda tangan dibatalkan atau data tidak valid.");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         this.setState({ preview: null });
         const { input: { onChange } } = this.props;
@@ -231,11 +263,10 @@ class SignaturePadComponent extends Component {
             ref={this.canvasRef}
             id="cnv"
             name="cnv"
-            // Hapus atribut width hardcoded di sini
-            height="100" // Tinggi tetap 100px
+            height="100" // Tinggi canvas tetap 100px
             style={{ 
               border: '1px solid #ccc', 
-              width: '100%', // Atur lebar menjadi 100%
+              width: '100%', // Lebar penuh
               marginBottom: preview ? '15px' : '0' 
             }}
           ></canvas>
@@ -248,7 +279,7 @@ class SignaturePadComponent extends Component {
                 src={preview}
                 alt="Tanda tangan tersimpan"
                 style={{
-                  width: "100%", // Atur lebar menjadi 100%
+                  width: "100%", // Lebar penuh
                   maxHeight: "120px",
                   objectFit: "contain",
                   border: '1px dashed #aaa',
