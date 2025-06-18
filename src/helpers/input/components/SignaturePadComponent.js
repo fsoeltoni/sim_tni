@@ -6,7 +6,7 @@ import {
   CardContent,
   CircularProgress,
 } from "@material-ui/core";
-import dataProvider from "../../../providers/data"; // Pastikan path ini benar
+import dataProvider from "../../../providers/data";
 
 class SignaturePadComponent extends Component {
   constructor(props) {
@@ -14,7 +14,9 @@ class SignaturePadComponent extends Component {
     this.state = {
       canvas: null,
       loading: false,
-      preview: props.input.value && props.input.value.src ? props.input.value.src : null,
+      preview: props.input?.value?.src || null,
+      sigPlusReady: false,
+      extensionInstalled: false
     };
   }
 
@@ -22,22 +24,47 @@ class SignaturePadComponent extends Component {
     this.setState({
       canvas: this.refs.canvas
     }, () => {
-      // Setelah canvas diset, gambar preview jika sudah ada
+      this.checkExtension();
       if (this.state.preview) {
         this.drawImageOnCanvas(this.state.preview);
       }
     });
   };
 
-  componentWillUnmount = () => {
-    window.top.document.removeEventListener(
-      "SignResponse",
-      this.signResponse,
-      false
-    );
+  checkExtension = () => {
+    // Check if SigPlusExtLite extension is installed
+    const isInstalled = document.documentElement.getAttribute('SigPlusExtLiteExtension-installed');
+    
+    if (isInstalled) {
+      this.setState({ extensionInstalled: true });
+      this.loadSigPlusWrapper();
+    } else {
+      console.warn("SigPlusExtLite extension not detected");
+      this.setState({ extensionInstalled: false });
+    }
   };
 
-  // Fungsi pembantu untuk menggambar gambar di canvas
+  loadSigPlusWrapper = () => {
+    try {
+      const url = document.documentElement.getAttribute('SigPlusExtLiteWrapperURL');
+      if (url) {
+        const script = document.createElement('script');
+        script.onload = () => {
+          console.log("SigPlus wrapper loaded");
+          this.setState({ sigPlusReady: true });
+        };
+        script.onerror = () => {
+          console.error("Failed to load SigPlus wrapper");
+          this.setState({ sigPlusReady: false });
+        };
+        script.src = url;
+        document.head.appendChild(script);
+      }
+    } catch (error) {
+      console.error("Error loading SigPlus wrapper:", error);
+    }
+  };
+
   drawImageOnCanvas = (imageUrl) => {
     const { canvas } = this.state;
     if (!canvas) return;
@@ -49,70 +76,115 @@ class SignaturePadComponent extends Component {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
     img.onerror = (e) => {
-      console.error("Error loading image for canvas display:", e);
+      console.warn("Error loading preview:", e);
     };
     img.src = imageUrl;
   };
 
-  startSign = () => {
-    const { canvas } = this.state;
+  startSign = async () => {
+    const { canvas, extensionInstalled, sigPlusReady } = this.state;
+    
+    if (!extensionInstalled) {
+      alert("SigPlusExtLite extension tidak terinstall atau tidak aktif. Silakan install atau aktifkan extension.");
+      return;
+    }
+
+    if (!sigPlusReady || !window.Topaz) {
+      alert("SigPlus tidak siap. Pastikan extension dan driver sudah terinstall.");
+      return;
+    }
+
+    if (!canvas) {
+      console.error("Canvas not ready");
+      return;
+    }
+
+    // Clear canvas
     canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-    this.setState({ preview: null }); // Hapus preview lama saat memulai tanda tangan baru
+    this.setState({ preview: null });
 
-    let message = {
-      firstName: "",
-      lastName: "",
-      eMail: "",
-      location: "",
-      imageFormat: 2,
-      imageX: canvas.width,
-      imageY: canvas.height,
-      imageTransparency: true,
-      imageScaling: false,
-      maxUpScalePercent: 0.0,
-      rawDataFormat: "ENC",
-      minSigPoints: 25
-    };
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
 
-    window.top.document.addEventListener(
-      "SignResponse",
-      this.signResponse,
-      false
-    );
-    const messageData = JSON.stringify(message);
-    const element = document.createElement("MyExtensionDataElement");
-    element.setAttribute("messageAttribute", messageData);
+    try {
+      const sign = window.Topaz.SignatureCaptureWindow.Sign;
+      
+      // Setup signature capture
+      sign.SetImageDetails(1, imgWidth, imgHeight, false, false, 0.0);
+      sign.SetPenDetails("Black", 1);
+      sign.SetMinSigPoints(25);
+      
+      // Start signing
+      await sign.StartSign(false, 1, 0, "");
+      
+      // Check for errors
+      let lastError = await window.Topaz.Global.GetLastError();
+      
+      if (lastError !== null && lastError !== "") {
+        if (lastError === "The signature does not have enough points to be valid." ||
+            lastError === "User cancelled signing.") {
+          console.log("SigPlusExtLite Info:", lastError);
+          // User cancelled, don't show error
+        } else {
+          alert("SigPlusExtLite Error: " + lastError);
+        }
+        return;
+      }
 
-    document.documentElement.appendChild(element);
-    const evt = window.document.createEvent("Events");
-    evt.initEvent("SignStartEvent", true, false);
-    element.dispatchEvent(evt);
+      // Process successful signature
+      const ctx = canvas.getContext('2d');
+      
+      if (await sign.IsSigned()) {
+        let imgData = await sign.GetSignatureImage();
+        
+        const img = new Image();
+        img.onload = () => {
+          // Draw to canvas
+          ctx.drawImage(img, 0, 0, imgWidth, imgHeight);
+          
+          // Get canvas data for upload
+          const canvasDataUrl = canvas.toDataURL("image/png");
+          
+          // Upload to Supabase
+          this.uploadToSupabase(canvasDataUrl);
+        };
+        
+        img.onerror = (e) => {
+          console.error("Error loading signature image:", e);
+          alert("Gagal memuat gambar tanda tangan");
+        };
+        
+        img.src = "data:image/png;base64," + imgData;
+      }
+      
+    } catch (error) {
+      console.error("Error during signing:", error);
+      alert("Terjadi kesalahan saat menandatangani: " + error.message);
+    }
   };
 
-  signResponse = event => {
-    const { canvas } = this.state;
-    const str = event.target.getAttribute("msgAttribute");
-    const obj = JSON.parse(str);
-
-    this.setValue(obj, canvas.width, canvas.height);
-  };
-
+  // Utility functions
   base64ToBlob = (base64) => {
-    const parts = base64.split(";base64,");
-    if (parts.length < 2) {
-      console.error("Invalid base64 string provided for Blob conversion.");
+    try {
+      const parts = base64.split(";base64,");
+      if (parts.length < 2) {
+        throw new Error("Invalid base64 format");
+      }
+      
+      const contentType = parts[0].split(":")[1];
+      const raw = window.atob(parts[1]);
+      const rawLength = raw.length;
+      const uInt8Array = new Uint8Array(rawLength);
+
+      for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+
+      return new Blob([uInt8Array], { type: contentType });
+    } catch (error) {
+      console.error("Error converting base64 to blob:", error);
       return new Blob();
     }
-    const contentType = parts[0].split(":")[1];
-    const raw = window.atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-
-    for (let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i);
-    }
-
-    return new Blob([uInt8Array], { type: contentType });
   };
 
   uploadToSupabase = async (base64Image) => {
@@ -123,8 +195,8 @@ class SignaturePadComponent extends Component {
       const fileName = `signature_${Date.now()}.png`;
       const file = new File([blob], fileName, { type: "image/png" });
 
-      const bucketName = "gambar"; // Sesuaikan dengan nama bucket Anda
-      const folderPath = "tanda_tangan_sim"; // Sesuaikan dengan struktur folder Anda
+      const bucketName = "gambar";
+      const folderPath = "tanda_tangan_sim";
 
       const { url, path } = await dataProvider.uploadFile(
         file,
@@ -139,16 +211,15 @@ class SignaturePadComponent extends Component {
         title: fileName,
       };
 
-      const {
-        input: { onChange },
-      } = this.props;
+      const { input: { onChange } } = this.props;
       onChange(fileData);
 
       this.setState({ preview: url });
-
+      console.log("Upload successful:", url);
+      
       return url;
     } catch (error) {
-      console.error("Error uploading signature:", error);
+      console.error("Upload error:", error);
       alert("Gagal mengupload tanda tangan!");
       return null;
     } finally {
@@ -156,67 +227,24 @@ class SignaturePadComponent extends Component {
     }
   };
 
-  setValue = async (res, width, height) => {
-    const {
-      input: { onChange }
-    } = this.props;
-    const { canvas } = this.state;
-    let obj = null;
-
-    if (typeof res === "string") {
-      obj = JSON.parse(res);
-    } else {
-      obj = JSON.parse(JSON.stringify(res));
-    }
-
-    const ctx = canvas.getContext("2d");
-
-    if (
-      obj.errorMsg !== null &&
-      obj.errorMsg !== "" &&
-      obj.errorMsg !== "undefined"
-    ) {
-      alert(obj.errorMsg);
-      // Clear canvas dan preview jika error
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      this.setState({ preview: null });
-      onChange(null);
-    } else {
-      if (obj.isSigned) {
-        var img = new Image();
-        img.onload = async () => {
-          // Gambar signature ke canvas
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Setelah digambar di canvas, ambil data canvas untuk upload
-          const base64ImageToUpload = canvas.toDataURL("image/png");
-          
-          // Upload ke Supabase
-          await this.uploadToSupabase(base64ImageToUpload);
-        };
-        img.onerror = (e) => {
-          console.error("Error loading signature image:", e);
-          alert("Gagal memuat gambar tanda tangan.");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          this.setState({ preview: null });
-          onChange(null);
-        };
-        img.src = "data:image/png;base64," + obj.imageData;
-      } else {
-        // Jika tidak ditandatangani
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        this.setState({ preview: null });
-        onChange(null);
-      }
-    }
-  };
-
   render() {
-    const { loading, preview } = this.state;
+    const { loading, preview, extensionInstalled, sigPlusReady } = this.state;
 
     return (
-      <Card>
+      <Card style={{ maxWidth: 600, margin: 'auto' }}>
         <CardContent>
+          {/* Status indicator */}
+          <div style={{ marginBottom: 10, fontSize: '12px' }}>
+            <span style={{ color: extensionInstalled ? '#4caf50' : '#f44336' }}>
+              ● Extension: {extensionInstalled ? 'Installed' : 'Not Installed'}
+            </span>
+            {extensionInstalled && (
+              <span style={{ color: sigPlusReady ? '#4caf50' : '#ff9800', marginLeft: 15 }}>
+                ● SigPlus: {sigPlusReady ? 'Ready' : 'Loading...'}
+              </span>
+            )}
+          </div>
+
           <canvas
             ref="canvas"
             id="cnv"
@@ -226,14 +254,21 @@ class SignaturePadComponent extends Component {
             style={{ 
               border: '1px solid #ccc', 
               width: '100%',
-              marginBottom: preview ? '15px' : '0' 
+              display: 'block',
+              marginBottom: preview ? '15px' : '0'
             }}
           />
 
-          {/* Tampilkan preview tanda tangan jika sudah ada */}
           {preview && (
             <div style={{ marginTop: 15 }}>
-              <strong>Tanda Tangan Tersimpan:</strong>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                marginBottom: 8,
+                color: '#4caf50'
+              }}>
+                ✓ Tanda Tangan Tersimpan:
+              </div>
               <img
                 src={preview}
                 alt="Tanda tangan tersimpan"
@@ -241,8 +276,10 @@ class SignaturePadComponent extends Component {
                   width: "100%",
                   maxHeight: "120px",
                   objectFit: "contain",
-                  border: '1px dashed #aaa',
-                  padding: '5px'
+                  border: '1px dashed #4caf50',
+                  padding: '8px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px'
                 }}
               />
             </div>
@@ -253,20 +290,44 @@ class SignaturePadComponent extends Component {
               style={{
                 display: "flex",
                 justifyContent: "center",
-                marginTop: 10,
+                alignItems: "center",
+                marginTop: 15,
+                padding: 15,
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px'
               }}
             >
-              <CircularProgress size={24} />
+              <CircularProgress size={24} style={{ marginRight: 10 }} />
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                Mengupload tanda tangan...
+              </span>
+            </div>
+          )}
+
+          {!extensionInstalled && (
+            <div style={{ 
+              marginTop: 15, 
+              padding: 10, 
+              backgroundColor: '#fff3cd', 
+              border: '1px solid #ffeaa7',
+              borderRadius: '4px',
+              fontSize: '14px'
+            }}>
+              ⚠️ SigPlusExtLite extension belum terinstall. Silakan install extension terlebih dahulu.
             </div>
           )}
         </CardContent>
+
         <CardActions>
           <Button 
             style={{ margin: "auto" }} 
             onClick={this.startSign}
-            disabled={loading}
+            disabled={loading || !extensionInstalled || !sigPlusReady}
+            variant="contained"
+            color="primary"
+            size="large"
           >
-            {preview ? "Tanda Tangani Ulang" : "Tanda Tangani"}
+            {loading ? "Processing..." : (preview ? "Tanda Tangani Ulang" : "Tanda Tangani")}
           </Button>
         </CardActions>
       </Card>
