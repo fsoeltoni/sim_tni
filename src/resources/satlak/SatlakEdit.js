@@ -111,6 +111,7 @@ const SatlakEdit = (props) => {
             reference="ibukota_provinsi"
             label="Markas"
             sort={{ field: "id", order: "ASC" }}
+ perPage={100}
           >
             <AutocompleteInput optionText="nama" />
           </ReferenceInput>
